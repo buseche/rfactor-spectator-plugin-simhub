@@ -113,6 +113,7 @@ namespace User.RfSpectator
             this.AttachDelegate(n + "Class", () => { var v = Row(p); return v == null ? "" : v.Class; });
             this.AttachDelegate(n + "Laps", () => { var v = Row(p); return v == null ? 0 : v.Laps; });
             this.AttachDelegate(n + "Sector", () => { var v = Row(p); return v == null ? 0 : v.Sector; });
+            this.AttachDelegate(n + "CarNumber", () => { var v = Row(p); return v == null ? "" : NameParts.CarNumber(v.Car); });
 
             this.AttachDelegate(n + "BestLap", () => { var v = Row(p); return v == null ? 0.0 : Pos(v.BestLap); });
             this.AttachDelegate(n + "BestLapText", () => { var v = Row(p); return v == null ? "" : RfFormat.LapTime(v.BestLap); });
@@ -136,6 +137,7 @@ namespace User.RfSpectator
             this.AttachDelegate(n + "LapDist", () => { var v = Row(p); return v == null ? 0.0 : (double)v.LapDist; });
             this.AttachDelegate(n + "PosX", () => { var v = Row(p); return v == null ? 0.0 : (double)v.PosX; });
             this.AttachDelegate(n + "PosZ", () => { var v = Row(p); return v == null ? 0.0 : (double)v.PosZ; });
+
         }
 
         RfVehicle Row(int place) { var s = Snap; return s == null ? null : s.AtPlace(place); }

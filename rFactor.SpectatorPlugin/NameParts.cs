@@ -52,5 +52,20 @@ namespace User.RfSpectator
             if (t.Length <= 1) return "";
             return string.Join(" ", t, 0, SurnameStart(t));
         }
+
+        /// <summary>
+        /// Numero de auto tomado del nombre del coche, si empieza con "#" (por ejemplo "#07 Mercedes C180" -> "07").
+        /// El juego no entrega el numero como dato aparte: depende de como el mod nombre el coche.
+        /// Se conserva tal cual (con ceros a la izquierda). Si no hay "#", devuelve texto vacio.
+        /// </summary>
+        public static string CarNumber(string car)
+        {
+            if (string.IsNullOrEmpty(car)) return "";
+            string t = car.TrimStart();
+            if (t.Length < 2 || t[0] != '#') return "";
+            int i = 1;
+            while (i < t.Length && i <= 4 && char.IsLetterOrDigit(t[i])) i++;
+            return t.Substring(1, i - 1);
+        }
     }
 }
