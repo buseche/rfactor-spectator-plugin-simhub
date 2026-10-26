@@ -4,9 +4,10 @@ using System.Collections.Generic;
 namespace User.RfSpectator
 {
     /// <summary>
-    /// Separa "Nombre Apellido" en nombre y apellido. Regla: el apellido es la ultima palabra, mas las
-    /// particulas que la preceden (van, von, de, del, ...). Un sufijo final (Jr, Sr, II, III) se ignora
-    /// para decidir el apellido pero se conserva dentro de el. Un nombre de una sola palabra es todo apellido.
+    /// Splits "First Last" into first name and surname for dashboards that show them separately.
+    /// Rule: the surname is the last word plus the particles before it (van, von, de, del, ...). A trailing
+    /// suffix (Jr, Sr, II, III) is ignored when locating the surname but kept inside it. A single-word
+    /// name is all surname.
     /// </summary>
     internal static class NameParts
     {
@@ -20,14 +21,14 @@ namespace User.RfSpectator
             "jr", "jr.", "sr", "sr.", "ii", "iii", "iv"
         };
 
-        /// <summary>Indice de la primera palabra del apellido.</summary>
+        /// <summary>Index of the first word of the surname.</summary>
         static int SurnameStart(string[] t)
         {
             int last = t.Length - 1;
-            // un sufijo ("Jr.") se queda con el apellido que le precede
+            // a suffix ("Jr.") stays with the surname that precedes it
             if (last >= 1 && Suffixes.Contains(t[last])) last--;
             int start = last;
-            // la primera palabra siempre es el nombre de pila
+            // the first word is always the given name, so never walk past index 1
             while (start - 1 >= 1 && Particles.Contains(t[start - 1])) start--;
             return start;
         }
@@ -38,6 +39,7 @@ namespace User.RfSpectator
             return full.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
+        /// <summary>Surname, or the whole name when it is a single word.</summary>
         public static string Surname(string full)
         {
             var t = Split(full);
@@ -46,6 +48,7 @@ namespace User.RfSpectator
             return string.Join(" ", t, SurnameStart(t), t.Length - SurnameStart(t));
         }
 
+        /// <summary>Everything before the surname; empty for single-word names.</summary>
         public static string FirstName(string full)
         {
             var t = Split(full);
@@ -54,9 +57,9 @@ namespace User.RfSpectator
         }
 
         /// <summary>
-        /// Numero de auto tomado del nombre del coche, si empieza con "#" (por ejemplo "#07 Mercedes C180" -> "07").
-        /// El juego no entrega el numero como dato aparte: depende de como el mod nombre el coche.
-        /// Se conserva tal cual (con ceros a la izquierda). Si no hay "#", devuelve texto vacio.
+        /// Car number taken from the car name when it starts with "#" (e.g. "#07 Mercedes C180" -> "07").
+        /// The game does not provide the number as separate data: it depends on how the mod names the car.
+        /// Kept as-is (leading zeros included). Without a "#", returns empty text.
         /// </summary>
         public static string CarNumber(string car)
         {

@@ -4,13 +4,18 @@ using System.Windows.Media;
 using GameReaderCommon;
 using SimHub.Plugins;
 
-// CONFIRMAR contra la demo (User.PluginSdkDemo/DataPluginDemo.cs) antes de compilar:
-//  - los "using" de arriba (la demo puede necesitar alguno mas, p. ej. el de la extension ToIcon),
-//  - la linea PictureIcon (se copia tal cual de la demo),
-//  - la firma de AttachDelegate (plan F1.2: abrir SimHub.Plugins.dll en ILSpy).
-// Este archivo NO se ha compilado contra SimHub: no hay SimHub en el entorno donde se escribio.
+/**
+ * 
+ * User.RfSpectator
+ * 
+ * Plugin which reads the shared memory from rFactor and set all the data to show in Simhub
+ * 
+ * 
+ */
 namespace User.RfSpectator
 {
+    // Entry point: owns the reader and registers every SimHub property. Properties are pure functions of the
+    // latest snapshot, so SimHub can poll them from any thread without locking.
     [PluginDescription("Tabla de posiciones de rFactor 1 en modo espectador (lee $rFactorShared$)")]
     [PluginAuthor("Proyecto")]
     [PluginName("RfSpectator")]
@@ -19,7 +24,6 @@ namespace User.RfSpectator
         public RfSpectatorSettings Settings;
         public PluginManager PluginManager { get; set; }
 
-        // CONFIRMAR: copiar de la demo (usa el recurso del icono del proyecto).
         public ImageSource PictureIcon => this.ToIcon(Properties.Resources.sdkmenuicon);
         public string LeftMenuTitle { get { return "RfSpectator"; } }
 
@@ -27,7 +31,7 @@ namespace User.RfSpectator
 
         public void Init(PluginManager pluginManager)
         {
-            // SimHub reconstruye los plugins al cambiar de juego: Init puede ejecutarse varias veces.
+            // SimHub rebuilds plugins when the game changes, so Init may run several times.
             Settings = this.ReadCommonSettings<RfSpectatorSettings>("GeneralSettings", () => new RfSpectatorSettings());
 
             int max = Math.Max(1, Math.Min(Settings.MaxPositions, RfLayout.MaxVehicles));
@@ -41,13 +45,15 @@ namespace User.RfSpectator
             SimHub.Logging.Current.Info("RfSpectator: lector iniciado sobre '" + _reader.MappingName + "', " + max + " posiciones");
         }
 
-        // No se usa: los datos llegan por el hilo propio, no por el lector nativo de SimHub
-        // (que es justo el que no entrega oponentes en espectador). No depender de data.GameRunning.
+        /// <summary>
+        /// Required by IDataPlugin but intentionally empty: all data comes from the reader thread through the
+        /// property delegates, so there is nothing to do per game-data tick.
+        /// </summary>
         public void DataUpdate(PluginManager pluginManager, ref GameData data) { }
 
         public void End(PluginManager pluginManager)
         {
-            // Debe poder ejecutarse varias veces.
+            // Must be safe to run more than once.
             var r = _reader;
             _reader = null;
             if (r != null) r.Dispose();
@@ -60,11 +66,13 @@ namespace User.RfSpectator
         }
 
         // ---------------------------------------------------------------------------------------------
-        // Propiedades. Los delegates leen SIEMPRE el ultimo snapshot publicado; nunca tocan el mapping.
+        // Properties. The delegates ALWAYS read the latest published snapshot; they never touch the mapping.
         // ---------------------------------------------------------------------------------------------
 
+        /// <summary>Latest published snapshot, or null before the first valid read or after Stop.</summary>
         RfSnapshot Snap { get { var r = _reader; return r == null ? null : r.Snapshot; } }
 
+        /// <summary>Connection state plus session-wide values, including the session's fastest lap.</summary>
         void RegisterSession()
         {
             this.AttachDelegate("Connected", () => _reader != null && _reader.Connected);
@@ -84,7 +92,7 @@ namespace User.RfSpectator
                 if (s == null || float.IsNaN(s.EndTime)) return 0.0;
                 return Math.Max(0.0, (double)s.EndTime - s.ElapsedTime);
             });
-            this.AttachDelegate("Session.MaxLaps", () => { var s = Snap; return s == null ? 0 : s.MaxLaps; });          // D: sin confirmar
+            this.AttachDelegate("Session.MaxLaps", () => { var s = Snap; return s == null ? 0 : s.MaxLaps; });          // D: unconfirmed
             this.AttachDelegate("Session.LapsLeft", () =>
             {
                 var s = Snap;
@@ -94,15 +102,25 @@ namespace User.RfSpectator
             });
             this.AttachDelegate("Session.NumVehicles", () => { var s = Snap; return s == null ? 0 : s.NumVehicles; });
             this.AttachDelegate("Session.PlayerName", () => { var s = Snap; return s == null ? "" : s.PlayerName; });
-            this.AttachDelegate("Session.Track", () => { var s = Snap; return s == null ? "" : s.Track; });            // vacio en espectador
+            this.AttachDelegate("Session.Track", () => { var s = Snap; return s == null ? "" : s.Track; });            // empty in spectator mode
             this.AttachDelegate("Session.TrackTemp", () => { var s = Snap; return (s == null || float.IsNaN(s.TrackTemp)) ? 0.0 : (double)s.TrackTemp; });     // D
             this.AttachDelegate("Session.AmbientTemp", () => { var s = Snap; return (s == null || float.IsNaN(s.AmbientTemp)) ? 0.0 : (double)s.AmbientTemp; }); // D
+
+            // Fastest lap of the session, so dashboards can show it without scanning every PosNN.BestLap.
+            this.AttachDelegate("Session.FastestLap", () => { var v = FastestCar(); return v == null ? 0.0 : Pos(v.BestLap); });
+            this.AttachDelegate("Session.FastestLapText", () => { var v = FastestCar(); return v == null ? "" : RfFormat.LapTime(v.BestLap); });
+            this.AttachDelegate("Session.FastestLapDriver", () => { var v = FastestCar(); return v == null ? "" : v.Driver; });
+            this.AttachDelegate("Session.FastestLapSurname", () => { var v = FastestCar(); return v == null ? "" : NameParts.Surname(v.Driver); });
+            this.AttachDelegate("Session.FastestLapPlace", () => { var v = FastestCar(); return v == null ? 0 : v.Place; });
+            this.AttachDelegate("Session.FastestLapCarNumber", () => { var v = FastestCar(); return v == null ? "" : NameParts.CarNumber(v.Car); });
+            this.AttachDelegate("Session.FastestLapClass", () => { var v = FastestCar(); return v == null ? "" : v.Class; });
         }
 
+        /// <summary>Registers every PosNN.* property for one leaderboard place.</summary>
         void RegisterPosition(int position)
         {
-            // IMPORTANTE: copiar a una variable local. Con la variable del bucle, todos los delegates
-            // terminarian apuntando a la ultima posicion.
+            // IMPORTANT: copy to a local variable. With the loop variable, every delegate
+            // would end up pointing at the last position.
             int p = position;
             string n = "Pos" + p.ToString("00") + ".";
 
@@ -129,6 +147,9 @@ namespace User.RfSpectator
             this.AttachDelegate(n + "LapsBehindLeader", () => { var v = Row(p); return v == null ? 0 : v.LapsBehindLeader; });      // ?
 
             this.AttachDelegate(n + "InPits", () => { var v = Row(p); return v != null && v.InPits; });
+            this.AttachDelegate(n + "PitTime", () => { var v = Row(p); return v == null ? 0.0 : (double)v.PitTime; });
+            this.AttachDelegate(n + "PitTimeText", () => { var v = Row(p); return v == null ? "" : RfFormat.LapTime(v.PitTime); });
+            this.AttachDelegate(n + "HasFastestLap", () => { var v = Row(p); return IsFastest(v); });
             this.AttachDelegate(n + "Pitstops", () => { var v = Row(p); return v == null ? 0 : v.Pitstops; });                      // ?
             this.AttachDelegate(n + "Penalties", () => { var v = Row(p); return v == null ? 0 : v.Penalties; });                    // ?
             this.AttachDelegate(n + "Status", () => { var v = Row(p); return v == null ? "" : RfFormat.Status(v.FinishStatus); });
@@ -137,11 +158,18 @@ namespace User.RfSpectator
             this.AttachDelegate(n + "LapDist", () => { var v = Row(p); return v == null ? 0.0 : (double)v.LapDist; });
             this.AttachDelegate(n + "PosX", () => { var v = Row(p); return v == null ? 0.0 : (double)v.PosX; });
             this.AttachDelegate(n + "PosZ", () => { var v = Row(p); return v == null ? 0.0 : (double)v.PosZ; });
-
         }
 
+        /// <summary>Vehicle at a leaderboard place in the latest snapshot, or null.</summary>
         RfVehicle Row(int place) { var s = Snap; return s == null ? null : s.AtPlace(place); }
 
+        /// <summary>Holder of the session's fastest lap, or null when nobody has a valid lap.</summary>
+        RfVehicle FastestCar() { var s = Snap; return s == null ? null : s.FastestLapCar; }
+
+        /// <summary>True for the fastest-lap holder; compares by place so it follows the car as positions change.</summary>
+        bool IsFastest(RfVehicle v) { var f = FastestCar(); return v != null && f != null && v.Place == f.Place; }
+
+        /// <summary>Lap time as a double, with 0 (not -1) for "no data" so dashboards can treat 0 as empty.</summary>
         static double Pos(float t) { return t > 0 ? (double)t : 0.0; }
     }
 }

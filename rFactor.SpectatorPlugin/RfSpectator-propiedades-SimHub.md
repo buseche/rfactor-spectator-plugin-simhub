@@ -78,6 +78,13 @@ Convenciones:
 | `RfSpectatorPlugin.Session.Track` | String | Nombre de la pista. | **Siempre vacio en espectador**: ese dato solo llega con la telemetria, que rFactor entrega al que conduce. |
 | `RfSpectatorPlugin.Session.TrackTemp` | Double | Temperatura de la pista, en grados Celsius. | Valores plausibles (26,9); sin otra referencia con que compararlos. |
 | `RfSpectatorPlugin.Session.AmbientTemp` | Double | Temperatura ambiente, en grados Celsius. | Idem. |
+| `RfSpectatorPlugin.Session.FastestLap` | Double | Mejor vuelta de la sesion (el minimo de `BestLap` entre todos los autos), en segundos. `0` si nadie tiene vuelta valida. | Rige solo para la sesion en curso: rFactor reinicia `BestLap` por sesion. En empate gana el auto mejor clasificado. |
+| `RfSpectatorPlugin.Session.FastestLapText` | String | Lo anterior como `m:ss.fff`. Vacio si no hay. | |
+| `RfSpectatorPlugin.Session.FastestLapDriver` | String | Piloto que tiene la vuelta rapida. | |
+| `RfSpectatorPlugin.Session.FastestLapSurname` | String | Solo el apellido de ese piloto. | |
+| `RfSpectatorPlugin.Session.FastestLapPlace` | Int32 | Posicion actual en carrera de ese piloto. `0` si no hay. | Cambia si el piloto sube o baja de posicion. |
+| `RfSpectatorPlugin.Session.FastestLapCarNumber` | String | Numero de auto del poseedor (ver `CarNumber`). | Vacio si el nombre del coche no empieza con `#`. |
+| `RfSpectatorPlugin.Session.FastestLapClass` | String | Clase del coche del poseedor. | |
 
 ---
 
@@ -105,8 +112,16 @@ Convenciones:
 | `LapDist` | Double | Distancia recorrida en la vuelta actual, en metros. | `744.16` |
 | `Status` | String | `Corriendo`, `Terminado`, `DNF` o `DQ` (en espanol). | `Corriendo` |
 | `InPits` | Boolean | `true` entre la entrada y la salida de boxes. | `false` |
+| `PitTime` | Double | Segundos transcurridos en boxes desde que el plugin **vio** la entrada; vuelve a `0` al salir. | `12.4` |
+| `PitTimeText` | String | Lo anterior como `m:ss.fff`. Vacio cuando es `0`. | `0:12.400` |
+| `HasFastestLap` | Boolean | `true` si este auto tiene la vuelta rapida de la sesion. Sirve para resaltar la fila. | `false` |
 | `Pitstops` | Int32 | Paradas realizadas. | Sin verificar (siempre `0` en las pruebas). |
 | `Penalties` | Int32 | Penalizaciones pendientes. | Sin verificar (siempre `0`). |
+
+`PitTime` solo cuenta una parada cuando se observa el paso de `InPits` de `false` a `true`: un auto que ya
+esta en boxes la primera vez que se lo ve (garaje al empezar la sesion, o plugin iniciado en plena parada)
+queda en `0` hasta su proxima entrada real. Usa el reloj de la sesion, asi que una pausa no infla el tiempo.
+Se reinicia al cambiar de sesion. **Sin probar dentro de SimHub.**
 
 ### Tiempos (segundos; `0` o texto vacio si no hay dato)
 
@@ -171,6 +186,9 @@ El plugin calcula la rotacion; el dashboard solo lee las filas.
 | `CarouselNN.BestLap`, `LastLap`, `GapLeader`, `GapAhead` | Double | Igual que en `PosNN`. |
 | `CarouselNN.BestLapText`, `LastLapText`, `GapLeaderText`, `GapAheadText`, `Status` | String | Igual que en `PosNN`. |
 | `CarouselNN.InPits`, `IsPlayer` | Boolean | Igual que en `PosNN`. |
+| `CarouselNN.PitTime` | Double | Igual que en `PosNN`. |
+| `CarouselNN.PitTimeText` | String | Igual que en `PosNN`. |
+| `CarouselNN.HasFastestLap` | Boolean | Igual que en `PosNN`. |
 
 Las filas del carrusel no incluyen `CurS1`, `CurS2`, `Pitstops`, `Penalties`, `LapsBehindLeader`,
 `SpeedKmh`, `LapDist`, `PosX` ni `PosZ`. Estado: la logica de rotacion esta probada con pruebas de
@@ -251,6 +269,7 @@ referencia; **Sin probar** = nunca vimos un valor distinto de cero.
 | `SpeedKmh`, `PosX`, `PosZ` | Verificado (valores coherentes) |
 | `IsPlayer` | Verificado (siempre `false` en espectador) |
 | `Pitstops`, `Penalties`, `LapsBehindLeader` | **Sin probar** |
+| `PitTime*`, `HasFastestLap`, `Session.FastestLap*` | Verificado solo con pruebas de unidad; sin probar en SimHub |
 
 ---
 

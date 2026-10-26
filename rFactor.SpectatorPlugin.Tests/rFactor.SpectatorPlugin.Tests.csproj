@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>User.RfSpectator.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- Only SimHub-free sources are linked; the plugin project itself needs SimHub DLLs and net48. -->
+  <ItemGroup>
+    <Compile Include="..\rFactor.SpectatorPlugin\PitTracker.cs" Link="Linked\PitTracker.cs" />
+    <Compile Include="..\rFactor.SpectatorPlugin\RfSnapshot.cs" Link="Linked\RfSnapshot.cs" />
+    <Compile Include="..\rFactor.SpectatorPlugin\RfLayout.cs" Link="Linked\RfLayout.cs" />
+    <Compile Include="..\rFactor.SpectatorPlugin\CarouselMath.cs" Link="Linked\CarouselMath.cs" />
+    <Compile Include="..\rFactor.SpectatorPlugin\NameParts.cs" Link="Linked\NameParts.cs" />
+  </ItemGroup>
+
+</Project>

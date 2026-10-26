@@ -110,6 +110,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="PitTracker.cs" />
     <Compile Include="RfLayout.cs" />
     <Compile Include="RfSnapshot.cs" />
     <Compile Include="RfSpectatorPlugin.Carousel.cs" />

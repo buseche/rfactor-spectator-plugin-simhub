@@ -1,18 +1,18 @@
 namespace User.RfSpectator
 {
-    /// <summary>Ajustes guardados por SimHub (JSON). Se leen en Init; cambiarlos requiere reiniciar SimHub.</summary>
+    /// <summary>Settings persisted by SimHub (JSON). Read in Init, so changing them requires restarting SimHub.</summary>
     public class RfSpectatorSettings
     {
-        /// <summary>Nombre del mapping. Para pruebas con ShmFake usar otro (p. ej. "$rFactorShared$Test").</summary>
+        /// <summary>Mapping name. Use a different one when testing with ShmFake (e.g. "$rFactorShared$Test").</summary>
         public string MappingName = "$rFactorShared$";
 
-        /// <summary>Cantidad de posiciones (PosNN) que se registran como propiedades. Maximo 128.</summary>
+        /// <summary>Number of positions (PosNN) registered as properties. Maximum 128.</summary>
         public int MaxPositions = 40;
 
-        /// <summary>Intervalo de lectura en milisegundos.</summary>
+        /// <summary>Read interval in milliseconds.</summary>
         public int PollMs = 100;
 
-        /// <summary>Segundos sin cambio de currentET para marcar DataFresh = false.</summary>
+        /// <summary>Seconds without a currentET change before DataFresh turns false.</summary>
         public double StaleSeconds = 5;
     }
 }

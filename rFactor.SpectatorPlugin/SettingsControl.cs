@@ -5,7 +5,7 @@ using System.Windows.Threading;
 
 namespace User.RfSpectator
 {
-    /// <summary>Pantalla de ajustes: solo muestra el estado del lector (se arma en codigo, sin XAML).</summary>
+    /// <summary>Settings screen: only shows the reader status. Built in code to avoid a XAML dependency.</summary>
     public class SettingsControl : UserControl
     {
         readonly Func<ShmReader> _get;
@@ -21,6 +21,7 @@ namespace User.RfSpectator
             Unloaded += (s, e) => _timer.Stop();
         }
 
+        /// <summary>Polled by a timer because the reader runs on another thread and raises no events.</summary>
         void Refresh()
         {
             var r = _get();
