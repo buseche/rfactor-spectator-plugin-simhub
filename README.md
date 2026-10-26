@@ -48,8 +48,9 @@ de Dash Studio (los componentes `Opponent...Text` del leaderboard nativo no se p
 
 ## Ajustes
 
-Definidos en `rFactor.SpectatorPlugin/RfSpectatorSettings.cs`, guardados por SimHub (clave `GeneralSettings`)
-y leidos al iniciar: un cambio requiere reiniciar SimHub. La pantalla del plugin solo muestra el estado del lector.
+Definidos en `rFactor.SpectatorPlugin/RfSpectatorSettings.cs` y guardados por SimHub (clave `GeneralSettings`).
+Los cuatro primeros se leen al iniciar: un cambio en el archivo de ajustes requiere reiniciar SimHub. Las filas del
+carrusel y los colores se editan en la pantalla del plugin (junto al estado del lector) y se aplican al instante.
 
 | Ajuste | Defecto | Descripcion |
 |---|---|---|
@@ -57,6 +58,13 @@ y leidos al iniciar: un cambio requiere reiniciar SimHub. La pantalla del plugin
 | `MaxPositions` | 40 | Cantidad de `PosNN` publicadas (1 a 128). |
 | `PollMs` | 100 | Intervalo de lectura en ms (minimo 20). |
 | `StaleSeconds` | 5 | Segundos sin avanzar el reloj de sesion antes de que `DataFresh` sea `false` (minimo 1). |
+| `CarouselRows` | 7 | Filas visibles del carrusel (1 a 20). Se edita en la pantalla del plugin; aplica en vivo. |
+| `ClassColors` | vacio | Clase -> `#RRGGBB`. Se edita en la pantalla del plugin; aplica en vivo. |
+| `CarColors` | vacio | Coche (`PosNN.Car`) -> `#RRGGBB`. Se edita en la pantalla del plugin; aplica en vivo. |
+
+Colores: solo `#RRGGBB` (se guarda en mayusculas, lo invalido se ignora), nombres sin distinguir mayusculas. El color
+por auto gana al de la clase; sin coincidencia la propiedad es `""`. Se publican como `PosNN.Color`, `CarouselNN.Color`
+y `Session.FastestLapColor`.
 
 ## Estructura de `rFactor.SpectatorPlugin/`
 
@@ -65,7 +73,8 @@ y leidos al iniciar: un cambio requiere reiniciar SimHub. La pantalla del plugin
 | `RfSpectatorPlugin.cs` | Punto de entrada: crea el lector y registra las propiedades `Session.*` y `PosNN.*`. |
 | `RfSpectatorPlugin.Carousel.cs` | Parte del plugin que registra `Carousel.*` y `CarouselNN.*`. |
 | `RfSpectatorSettings.cs` | Ajustes persistidos. |
-| `SettingsControl.cs` | Pantalla de estado del plugin en SimHub (WPF, creada en codigo). |
+| `SettingsControl.cs` | Pantalla del plugin en SimHub: estado del lector, filas del carrusel y colores (WPF, creada en codigo). |
+| `ColorResolver.cs` | Validacion `#RRGGBB` y resolucion de color (auto sobre clase), sin dependencias de SimHub. |
 | `ShmReader.cs` | Hilo lector del mapping, deteccion de sesion nueva, estado de conexion. |
 | `RfLayout.cs` | Offsets del bloque de memoria compartida (unico sitio a tocar si cambia el formato). |
 | `RfSnapshot.cs` | `RfSnapshot`, `RfVehicle`, `RfParser` (validacion y decodificacion) y `RfFormat` (textos). |
@@ -80,9 +89,10 @@ y leidos al iniciar: un cambio requiere reiniciar SimHub. La pantalla del plugin
 ## Carrusel de posiciones
 
 Para dashboards estilo transmision de TV: el bloque principal muestra `Pos01` a `Pos10` y un bloque inferior
-recorre las posiciones 11 en adelante (`CarouselNN`, 7 filas) cambiando de pagina cada 5 segundos.
+recorre las posiciones 11 en adelante (`CarouselNN`, 7 filas por defecto, configurable de 1 a 20 en la pantalla del plugin)
+cambiando de pagina cada 5 segundos. Se registran siempre 20 filas; las que exceden el ajuste quedan vacias.
 `Carousel.Pages`, `Page`, `FirstPlace`, `LastPlace` y `RangeText` describen la pagina actual. La rotacion
-depende del reloj del ordenador. Las constantes (primera posicion, filas, segundos) estan en
+depende del reloj del ordenador. La primera posicion (11) y los segundos por pagina (5) estan en
 `RfSpectatorPlugin.Carousel.cs` y se cambian recompilando.
 
 ## Funciones recientes
@@ -93,6 +103,8 @@ depende del reloj del ordenador. Las constantes (primera posicion, filas, segund
 - **Vuelta rapida de la sesion** (`Session.FastestLap`, `FastestLapText`, `FastestLapDriver`,
   `FastestLapSurname`, `FastestLapPlace`, `FastestLapCarNumber`, `FastestLapClass`) y `PosNN.HasFastestLap`
   para resaltar la fila. En empate gana el auto mejor clasificado.
+- **Colores por clase y por auto** (`PosNN.Color`, `CarouselNN.Color`, `Session.FastestLapColor`) y **filas del carrusel
+  configurables**, ambos desde la pantalla del plugin.
 - Numero de auto (`PosNN.CarNumber`) tomado del nombre del coche cuando empieza con `#`.
 
 ## Pruebas
@@ -102,7 +114,7 @@ dotnet test rFactor.SpectatorPlugin.Tests
 ```
 
 Corren en Windows y Linux (proyecto `net8.0` con xUnit, sin SimHub). Cubren el parser, `PitTracker`, la vuelta
-rapida, el carrusel y `NameParts`. La capa de SimHub (registro de propiedades, ajustes, pantalla) no tiene
+rapida, el carrusel, `ColorResolver` y `NameParts`. La capa de SimHub (registro de propiedades, ajustes, pantalla) no tiene
 pruebas automaticas.
 
 ## Limites y datos sin confirmar
@@ -113,7 +125,7 @@ pruebas automaticas.
 - Derivados (D): `MaxLaps`, `AmbientTemp`, `TrackTemp`. Sin confirmar (?): `Pitstops`, `Penalties`,
   `LapsBehindLeader` (siempre 0 en las pruebas; con autos doblados `GapAhead` puede no ser fiable).
 - `Session.Track` esta vacio en espectador. `IsPlayer` es `false` para todos en espectador.
-- `PitTime`, `HasFastestLap`, `Session.FastestLap*` y el carrusel estan probados con pruebas de unidad, no dentro de SimHub.
+- `PitTime`, `HasFastestLap`, `Session.FastestLap*`, el carrusel y la resolucion de colores estan probados con pruebas de unidad, no dentro de SimHub.
 - Los textos (`PhaseText`, `YellowText`, `Status`) estan en espanol; para otros idiomas usar los codigos numericos.
 - No probado: practica, clasificacion, paradas en boxes reales, autos doblados, otras versiones del DLL de
   memoria compartida.

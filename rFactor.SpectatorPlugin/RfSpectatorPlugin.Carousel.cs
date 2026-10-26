@@ -9,23 +9,26 @@ namespace User.RfSpectator
     // Partial so carousel code lives apart from the core plugin; shares Snap and the Register* helpers.
     public partial class RfSpectatorPlugin
     {
-        // Carousel tuning. Change here and recompile.
+        // Carousel tuning. Start and seconds are fixed (recompile); the row count comes from the settings panel.
         const int CarouselStart = 11;          // first place that enters the carousel
-        const int CarouselRows = 7;           // visible rows of the lower block
+        const int CarouselMaxRows = RfSpectatorSettings.CarouselMaxRows;   // CarouselNN.* registered up to here
         const double CarouselSeconds = 5.0;    // seconds per page
 
         static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         static double NowSeconds() { return (DateTime.UtcNow - Epoch).TotalSeconds; }
 
-        int CarouselPages(RfSnapshot s) { return CarouselMath.Pages(s.NumVehicles, CarouselStart, CarouselRows); }
+        /// <summary>Live row count, re-read on every delegate call so the settings panel applies without restarting.</summary>
+        int LiveRows { get { var st = Settings; return CarouselMath.ClampRows(st == null ? 7 : st.CarouselRows, CarouselMaxRows); } }
+
+        int CarouselPages(RfSnapshot s) { return CarouselMath.Pages(s.NumVehicles, CarouselStart, LiveRows); }
 
         int CarouselPage(RfSnapshot s) { return CarouselMath.Page(CarouselPages(s), NowSeconds(), CarouselSeconds); }
 
         /// <summary>Real place shown by carousel row r right now (0 = empty).</summary>
         int CarouselPlace(RfSnapshot s, int r)
         {
-            return CarouselMath.PlaceAt(s.NumVehicles, CarouselStart, CarouselRows, CarouselPage(s), r);
+            return CarouselMath.PlaceAt(s.NumVehicles, CarouselStart, LiveRows, CarouselPage(s), r);
         }
 
         /// <summary>Vehicle currently shown in carousel row r, or null.</summary>
@@ -47,7 +50,7 @@ namespace User.RfSpectator
             {
                 var s = Snap;
                 if (s == null) return 0;
-                for (int r = CarouselRows; r >= 1; r--) { int p = CarouselPlace(s, r); if (p != 0) return p; }
+                for (int r = LiveRows; r >= 1; r--) { int p = CarouselPlace(s, r); if (p != 0) return p; }
                 return 0;
             });
             this.AttachDelegate("Carousel.RangeText", () =>
@@ -57,11 +60,12 @@ namespace User.RfSpectator
                 int first = CarouselPlace(s, 1);
                 if (first == 0) return "";
                 int last = first;
-                for (int r = CarouselRows; r >= 1; r--) { int p = CarouselPlace(s, r); if (p != 0) { last = p; break; } }
+                for (int r = LiveRows; r >= 1; r--) { int p = CarouselPlace(s, r); if (p != 0) { last = p; break; } }
                 return first == last ? first.ToString() : first + "-" + last;
             });
 
-            for (int i = 1; i <= CarouselRows; i++) RegisterCarouselRow(i);
+            // All rows are registered up front; rows beyond LiveRows resolve to an empty place and return empty values.
+            for (int i = 1; i <= CarouselMaxRows; i++) RegisterCarouselRow(i);
         }
 
         void RegisterCarouselRow(int row)
@@ -91,6 +95,7 @@ namespace User.RfSpectator
             this.AttachDelegate(n + "HasFastestLap", () => { var v = CarouselRow(r); return IsFastest(v); });
             this.AttachDelegate(n + "Status", () => { var v = CarouselRow(r); return v == null ? "" : RfFormat.Status(v.FinishStatus); });
             this.AttachDelegate(n + "IsPlayer", () => { var v = CarouselRow(r); return v != null && v.IsPlayer; });
+            this.AttachDelegate(n + "Color", () => ColorOf(CarouselRow(r)));
         }
     }
 }

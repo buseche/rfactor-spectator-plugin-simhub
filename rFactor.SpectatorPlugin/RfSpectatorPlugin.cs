@@ -62,7 +62,7 @@ namespace User.RfSpectator
 
         public Control GetWPFSettingsControl(PluginManager pluginManager)
         {
-            return new SettingsControl(() => _reader);
+            return new SettingsControl(Settings, () => this.SaveCommonSettings("GeneralSettings", Settings), () => _reader);
         }
 
         // ---------------------------------------------------------------------------------------------
@@ -114,6 +114,7 @@ namespace User.RfSpectator
             this.AttachDelegate("Session.FastestLapPlace", () => { var v = FastestCar(); return v == null ? 0 : v.Place; });
             this.AttachDelegate("Session.FastestLapCarNumber", () => { var v = FastestCar(); return v == null ? "" : NameParts.CarNumber(v.Car); });
             this.AttachDelegate("Session.FastestLapClass", () => { var v = FastestCar(); return v == null ? "" : v.Class; });
+            this.AttachDelegate("Session.FastestLapColor", () => ColorOf(FastestCar()));
         }
 
         /// <summary>Registers every PosNN.* property for one leaderboard place.</summary>
@@ -132,6 +133,7 @@ namespace User.RfSpectator
             this.AttachDelegate(n + "Laps", () => { var v = Row(p); return v == null ? 0 : v.Laps; });
             this.AttachDelegate(n + "Sector", () => { var v = Row(p); return v == null ? 0 : v.Sector; });
             this.AttachDelegate(n + "CarNumber", () => { var v = Row(p); return v == null ? "" : NameParts.CarNumber(v.Car); });
+            this.AttachDelegate(n + "Color", () => ColorOf(Row(p)));
 
             this.AttachDelegate(n + "BestLap", () => { var v = Row(p); return v == null ? 0.0 : Pos(v.BestLap); });
             this.AttachDelegate(n + "BestLapText", () => { var v = Row(p); return v == null ? "" : RfFormat.LapTime(v.BestLap); });
@@ -168,6 +170,14 @@ namespace User.RfSpectator
 
         /// <summary>True for the fastest-lap holder; compares by place so it follows the car as positions change.</summary>
         bool IsFastest(RfVehicle v) { var f = FastestCar(); return v != null && f != null && v.Place == f.Place; }
+
+        /// <summary>User color for a car ("#RRGGBB"), "" when none; per-car color beats class color.</summary>
+        string ColorOf(RfVehicle v)
+        {
+            var st = Settings;
+            if (v == null || st == null) return "";
+            return ColorResolver.Resolve(st.ClassColors, st.CarColors, v.Car, v.Class);
+        }
 
         /// <summary>Lap time as a double, with 0 (not -1) for "no data" so dashboards can treat 0 as empty.</summary>
         static double Pos(float t) { return t > 0 ? (double)t : 0.0; }

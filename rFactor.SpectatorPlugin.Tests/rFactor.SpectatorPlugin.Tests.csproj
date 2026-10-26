@@ -21,6 +21,7 @@
     <Compile Include="..\rFactor.SpectatorPlugin\RfLayout.cs" Link="Linked\RfLayout.cs" />
     <Compile Include="..\rFactor.SpectatorPlugin\CarouselMath.cs" Link="Linked\CarouselMath.cs" />
     <Compile Include="..\rFactor.SpectatorPlugin\NameParts.cs" Link="Linked\NameParts.cs" />
+    <Compile Include="..\rFactor.SpectatorPlugin\ColorResolver.cs" Link="Linked\ColorResolver.cs" />
   </ItemGroup>
 
 </Project>

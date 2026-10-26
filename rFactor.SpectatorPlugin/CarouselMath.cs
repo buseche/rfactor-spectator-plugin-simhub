@@ -9,6 +9,13 @@ namespace User.RfSpectator
     /// </summary>
     internal static class CarouselMath
     {
+        /// <summary>Bounds a user-configured row count to 1..max so a bad setting can never break paging or registration.</summary>
+        public static int ClampRows(int rows, int max)
+        {
+            if (rows < 1) return 1;
+            return rows > max ? max : rows;
+        }
+
         /// <summary>Number of pages; 0 when no car falls in the carousel range.</summary>
         public static int Pages(int numVehicles, int start, int rows)
         {

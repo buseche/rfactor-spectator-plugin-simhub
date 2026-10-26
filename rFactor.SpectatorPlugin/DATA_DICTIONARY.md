@@ -3,7 +3,7 @@
 Referencia completa de los datos que maneja el plugin, desde los bytes de la memoria compartida hasta las
 propiedades que ve SimHub. Se construyo leyendo el codigo (`RfLayout.cs`, `RfSnapshot.cs`, `PitTracker.cs`,
 `ShmReader.cs`, `RfSpectatorPlugin.cs`, `RfSpectatorPlugin.Carousel.cs`, `RfSpectatorSettings.cs`,
-`CarouselMath.cs`, `NameParts.cs`). Si el codigo y este documento difieren, manda el codigo.
+`CarouselMath.cs`, `ColorResolver.cs`, `SettingsControl.cs`, `NameParts.cs`). Si el codigo y este documento difieren, manda el codigo.
 
 Para el uso en dashboards (ejemplos, estado de verificacion en pruebas reales) ver
 [RfSpectator-propiedades-SimHub.md](RfSpectator-propiedades-SimHub.md).
@@ -293,6 +293,7 @@ lo indicado en la columna "Sin dato": texto `""`, numerico `0`, booleano `false`
 | `Session.FastestLapPlace` | int | posicion | Posicion **actual** del poseedor (cambia si sube o baja). | 0 |
 | `Session.FastestLapCarNumber` | string | | Numero de auto del poseedor (6.4). | `""` |
 | `Session.FastestLapClass` | string | | Clase del poseedor. | `""` |
+| `Session.FastestLapColor` | string | `#RRGGBB` | Color resuelto del poseedor (6.6). | `""` |
 
 Los `Session.FastestLap*` valen su "sin dato" tambien cuando nadie tiene vuelta valida.
 
@@ -312,6 +313,7 @@ publican `0` (no `-1`) cuando no hay dato (helper `Pos`: `t > 0 ? t : 0`).
 | `Laps` | int | vueltas | Vueltas completadas. | 0 |
 | `Sector` | int | 1..3 | Sector actual (3.4). | 0 |
 | `CarNumber` | string | | Numero de auto sacado de `Car` (6.4). | `""` |
+| `Color` | string | `#RRGGBB` | Color resuelto: por auto, si no por clase (6.6). | `""` |
 | `BestLap` | double | s | Mejor vuelta. | 0 |
 | `BestLapText` | string | `m:ss.fff` | Idem texto. | `""` |
 | `LastLap` | double | s | Ultima vuelta. | 0 |
@@ -341,7 +343,8 @@ Cantidad: `MaxPositions` limitado a 1..128 (`max(1, min(MaxPositions, 128))`).
 ### 4.4 Carrusel (`Carousel.*` y `CarouselNN.*`)
 
 Constantes (en `RfSpectatorPlugin.Carousel.cs`, se cambian recompilando): primera posicion `CarouselStart = 11`,
-filas `CarouselRows = 7`, `CarouselSeconds = 5.0` por pagina.
+`CarouselSeconds = 5.0` por pagina y `CarouselMaxRows = 20` (filas registradas). Las filas visibles son el ajuste
+`CarouselRows` (defecto 7, 1..20), leido en vivo en cada consulta de propiedad (seccion 5).
 
 Globales:
 
@@ -353,7 +356,7 @@ Globales:
 | `Carousel.LastPlace` | int | Posicion real de la ultima fila **ocupada** de la pagina actual. | 0 |
 | `Carousel.RangeText` | string | `first-last` (ej. `11-17`); solo `first` si coinciden; vacio si la fila 1 esta vacia. | `""` |
 
-Por fila (`NN` = `01` a `07`). Mismo tipo, formato y valor sin dato que en `PosNN`, salvo `Place`:
+Por fila (`NN` = `01` a `20`; las que superan `CarouselRows` devuelven los valores sin dato). Mismo tipo, formato y valor sin dato que en `PosNN`, salvo `Place`:
 
 | Propiedad | Tipo | Descripcion |
 |---|---|---|
@@ -363,6 +366,7 @@ Por fila (`NN` = `01` a `07`). Mismo tipo, formato y valor sin dato que en `PosN
 | `BestLap`, `LastLap`, `GapLeader`, `GapAhead`, `PitTime` | double | Como en `PosNN`. |
 | `BestLapText`, `LastLapText`, `GapLeaderText`, `GapAheadText`, `PitTimeText`, `Status` | string | Como en `PosNN`. |
 | `InPits`, `HasFastestLap`, `IsPlayer` | bool | Como en `PosNN`. |
+| `Color` | string | Como en `PosNN` (6.6). |
 
 Las filas del carrusel **no** incluyen `CarNumber`, `CurS1`, `CurS2`, `LapsBehindLeader`, `Pitstops`,
 `Penalties`, `SpeedKmh`, `LapDist`, `PosX` ni `PosZ`.
@@ -371,10 +375,11 @@ Las filas del carrusel **no** incluyen `CarNumber`, `CurS1`, `CurS2`, `LapsBehin
 
 ## 5. Ajustes (`RfSpectatorSettings.cs`)
 
-Persistidos por SimHub (JSON, clave `GeneralSettings`). Se leen en `Init`: un cambio requiere reiniciar SimHub.
-Se guardan en `End`. La pantalla de ajustes del plugin (`SettingsControl`) solo muestra el estado del lector,
-refrescado cada 500 ms (mapping, estado, conectado, datos frescos, tamano de vista, autos, tiempo de sesion,
-ultimo cambio, lecturas descartadas); los valores se editan en el archivo de ajustes.
+Persistidos por SimHub (JSON, clave `GeneralSettings`); se guardan en `End` y, para filas y colores, al instante
+en cada edicion de la pantalla del plugin. `MappingName`, `MaxPositions`, `PollMs` y `StaleSeconds` se leen en
+`Init`: un cambio requiere reiniciar SimHub. `CarouselRows`, `ClassColors` y `CarColors` se releen en cada consulta
+de propiedad y se aplican en vivo. La pantalla (`SettingsControl`, WPF creada en codigo) muestra el estado del
+lector (refrescado cada 500 ms) y permite editar esos tres ajustes.
 
 | Campo | Tipo | Defecto | Descripcion | Limites aplicados en codigo |
 |---|---|---|---|---|
@@ -382,8 +387,14 @@ ultimo cambio, lecturas descartadas); los valores se editan en el archivo de aju
 | `MaxPositions` | int | 40 | Cantidad de `PosNN` registradas. | 1..128. |
 | `PollMs` | int | 100 | Intervalo de lectura en ms. | Minimo 20. |
 | `StaleSeconds` | double | 5 | Segundos sin cambio de `CurrentET` antes de que `DataFresh` sea `false`. | Minimo 1. |
+| `CarouselRows` | int | 7 | Filas visibles del carrusel (en vivo). | 1..`CarouselMaxRows` (20), `CarouselMath.ClampRows`. |
+| `ClassColors` | dict string->string | vacio | Clase -> `#RRGGBB` (en vivo). | Solo `#RRGGBB`; lo invalido se ignora; clave sin distinguir mayusculas. |
+| `CarColors` | dict string->string | vacio | `RfVehicle.Car` -> `#RRGGBB` (en vivo). | Igual que `ClassColors`. |
 
-Las constantes del carrusel **no** son ajustes: estan en el codigo (4.4).
+Hilos: la UI edita y los hilos de SimHub leen. Cada edicion de colores construye un diccionario nuevo
+(`ColorResolver.With`/`Without`) y reemplaza la referencia (campo `volatile`), sin mutar el anterior.
+
+La primera posicion del carrusel (11) y los segundos por pagina (5) **no** son ajustes: estan en el codigo (4.4).
 
 ---
 
@@ -429,7 +440,7 @@ no entrega el numero como dato separado.
 
 ### 6.5 Carrusel (`CarouselMath.cs`)
 
-Con `N` = `NumVehicles`, `start` = 11, `rows` = 7, `secondsPerPage` = 5:
+Con `N` = `NumVehicles`, `start` = 11, `rows` = ajuste `CarouselRows` (defecto 7, acotado por `ClampRows`), `secondsPerPage` = 5:
 
 | Formula | Resultado |
 |---|---|
@@ -437,10 +448,18 @@ Con `N` = `NumVehicles`, `start` = 11, `rows` = 7, `secondsPerPage` = 5:
 | `Page` (base 0) | `0` si `pages <= 1`; si no `floor(nowSeconds / secondsPerPage) mod pages`. `nowSeconds` es el reloj UTC desde 1970, asi que todos los dashboards de la misma maquina muestran la misma pagina. `Carousel.Page` publica `Page + 1`. |
 | `PlaceAt(page, fila)` | `start + page * rows + (fila - 1)`; `0` si la fila esta fuera de 1..rows o la posicion supera `N`. |
 
-Ejemplos con las constantes actuales: N <= 10 -> 0 paginas; N entre 11 y 17 -> 1 pagina fija; N = 20 -> 2
+Ejemplos con 7 filas: N <= 10 -> 0 paginas; N entre 11 y 17 -> 1 pagina fija; N = 20 -> 2
 paginas (11-17 y 18-20, con 4 filas vacias en la segunda).
 
-### 6.6 Sentinelas y valores sin dato
+### 6.6 Colores (`ColorResolver.cs`)
+
+| Funcion | Regla |
+|---|---|
+| `Normalize` | Acepta solo `#RRGGBB` (se recortan espacios); devuelve en mayusculas, `null` si es invalido (sin `#RGB`, sin nombres). |
+| `Resolve(clase, auto)` | Color por auto (`Car`) si existe y es valido; si no color por clase (`Class`); si no `""`. Claves sin distinguir mayusculas. |
+| `With` / `Without` | Devuelven una copia nueva (comparador ignora mayusculas); `With` devuelve la misma instancia si clave o color son invalidos. |
+
+### 6.7 Sentinelas y valores sin dato
 
 | Dato | En memoria | En el snapshot | En la propiedad |
 |---|---|---|---|
@@ -451,3 +470,4 @@ paginas (11-17 y 18-20, con 4 filas vacias en la segunda).
 | S2 sin dato | | `-1` | `0` |
 | Sin auto en la posicion | | `AtPlace = null` | texto `""`, numerico `0`, bool `false` |
 | Sin poseedor de vuelta rapida | | `FastestLapPlace = 0` | `FastestLap* ` vacios/0, `HasFastestLap = false` |
+| Sin color configurado | | | `Color = ""` |
