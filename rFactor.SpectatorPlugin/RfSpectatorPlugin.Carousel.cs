@@ -1,32 +1,37 @@
 using System;
 using SimHub.Plugins;
 
-// Carrusel de posiciones (estilo transmision de TV): el bloque principal del dashboard muestra
-// Pos01..Pos10 y el bloque inferior lee CarouselNN, que va rotando por las posiciones 11 en adelante.
-// Requiere que la clase principal sea "partial" (ver instrucciones) y llamar RegisterCarousel() desde Init.
+// Position carousel (TV-broadcast style): the dashboard's main block shows Pos01..Pos10 and the lower
+// block reads CarouselNN, which rotates through places 11 onwards so large grids fit on screen.
+// Needs the main class to be "partial" and RegisterCarousel() to be called from Init.
 namespace User.RfSpectator
 {
+    // Partial so carousel code lives apart from the core plugin; shares Snap and the Register* helpers.
     public partial class RfSpectatorPlugin
     {
-        // Ajustes del carrusel. Se cambian aqui y se recompila.
-        const int CarouselStart = 11;          // primera posicion que entra al carrusel
-        const int CarouselRows = 7;           // filas visibles del bloque inferior
-        const double CarouselSeconds = 5.0;    // segundos por pagina
+        // Carousel tuning. Start and seconds are fixed (recompile); the row count comes from the settings panel.
+        const int CarouselStart = 11;          // first place that enters the carousel
+        const int CarouselMaxRows = RfSpectatorSettings.CarouselMaxRows;   // CarouselNN.* registered up to here
+        const double CarouselSeconds = 5.0;    // seconds per page
 
         static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         static double NowSeconds() { return (DateTime.UtcNow - Epoch).TotalSeconds; }
 
-        int CarouselPages(RfSnapshot s) { return CarouselMath.Pages(s.NumVehicles, CarouselStart, CarouselRows); }
+        /// <summary>Live row count, re-read on every delegate call so the settings panel applies without restarting.</summary>
+        int LiveRows { get { var st = Settings; return CarouselMath.ClampRows(st == null ? 7 : st.CarouselRows, CarouselMaxRows); } }
+
+        int CarouselPages(RfSnapshot s) { return CarouselMath.Pages(s.NumVehicles, CarouselStart, LiveRows); }
 
         int CarouselPage(RfSnapshot s) { return CarouselMath.Page(CarouselPages(s), NowSeconds(), CarouselSeconds); }
 
-        /// <summary>Posicion real que muestra la fila r del carrusel en este momento (0 = vacia).</summary>
+        /// <summary>Real place shown by carousel row r right now (0 = empty).</summary>
         int CarouselPlace(RfSnapshot s, int r)
         {
-            return CarouselMath.PlaceAt(s.NumVehicles, CarouselStart, CarouselRows, CarouselPage(s), r);
+            return CarouselMath.PlaceAt(s.NumVehicles, CarouselStart, LiveRows, CarouselPage(s), r);
         }
 
+        /// <summary>Vehicle currently shown in carousel row r, or null.</summary>
         RfVehicle CarouselRow(int r)
         {
             var s = Snap;
@@ -35,6 +40,7 @@ namespace User.RfSpectator
             return place == 0 ? null : s.AtPlace(place);
         }
 
+        /// <summary>Registers the paging info plus one property group per visible row.</summary>
         void RegisterCarousel()
         {
             this.AttachDelegate("Carousel.Pages", () => { var s = Snap; return s == null ? 0 : CarouselPages(s); });
@@ -44,7 +50,7 @@ namespace User.RfSpectator
             {
                 var s = Snap;
                 if (s == null) return 0;
-                for (int r = CarouselRows; r >= 1; r--) { int p = CarouselPlace(s, r); if (p != 0) return p; }
+                for (int r = LiveRows; r >= 1; r--) { int p = CarouselPlace(s, r); if (p != 0) return p; }
                 return 0;
             });
             this.AttachDelegate("Carousel.RangeText", () =>
@@ -54,16 +60,17 @@ namespace User.RfSpectator
                 int first = CarouselPlace(s, 1);
                 if (first == 0) return "";
                 int last = first;
-                for (int r = CarouselRows; r >= 1; r--) { int p = CarouselPlace(s, r); if (p != 0) { last = p; break; } }
+                for (int r = LiveRows; r >= 1; r--) { int p = CarouselPlace(s, r); if (p != 0) { last = p; break; } }
                 return first == last ? first.ToString() : first + "-" + last;
             });
 
-            for (int i = 1; i <= CarouselRows; i++) RegisterCarouselRow(i);
+            // All rows are registered up front; rows beyond LiveRows resolve to an empty place and return empty values.
+            for (int i = 1; i <= CarouselMaxRows; i++) RegisterCarouselRow(i);
         }
 
         void RegisterCarouselRow(int row)
         {
-            int r = row;   // copiar a local: los delegates no deben compartir la variable del bucle
+            int r = row;   // copy to a local: the delegates must not share the loop variable
             string n = "Carousel" + r.ToString("00") + ".";
 
             this.AttachDelegate(n + "Place", () => { var v = CarouselRow(r); return v == null ? 0 : v.Place; });
@@ -83,8 +90,12 @@ namespace User.RfSpectator
             this.AttachDelegate(n + "GapAhead", () => { var v = CarouselRow(r); return v == null ? 0.0 : (double)v.GapAhead; });
             this.AttachDelegate(n + "GapAheadText", () => { var v = CarouselRow(r); return v == null ? "" : RfFormat.Gap(v, v.GapAhead); });
             this.AttachDelegate(n + "InPits", () => { var v = CarouselRow(r); return v != null && v.InPits; });
+            this.AttachDelegate(n + "PitTime", () => { var v = CarouselRow(r); return v == null ? 0.0 : (double)v.PitTime; });
+            this.AttachDelegate(n + "PitTimeText", () => { var v = CarouselRow(r); return v == null ? "" : RfFormat.LapTime(v.PitTime); });
+            this.AttachDelegate(n + "HasFastestLap", () => { var v = CarouselRow(r); return IsFastest(v); });
             this.AttachDelegate(n + "Status", () => { var v = CarouselRow(r); return v == null ? "" : RfFormat.Status(v.FinishStatus); });
             this.AttachDelegate(n + "IsPlayer", () => { var v = CarouselRow(r); return v != null && v.IsPlayer; });
+            this.AttachDelegate(n + "Color", () => ColorOf(CarouselRow(r)));
         }
     }
 }

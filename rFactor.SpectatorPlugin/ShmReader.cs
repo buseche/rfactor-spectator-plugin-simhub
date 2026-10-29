@@ -7,11 +7,11 @@ using System.Threading;
 namespace User.RfSpectator
 {
     /// <summary>
-    /// Lee "$rFactorShared$" en un hilo propio y publica snapshots inmutables.
-    /// Solo lectura: nunca escribe en el mapping.
-    /// Nota: mientras este lector tenga el mapping abierto, Windows lo mantiene vivo aunque rFactor se cierre
-    /// (queda en ceros). Por eso no hace falta reabrirlo cuando rFactor reinicia: el plugin de rFactor
-    /// vuelve a abrir el mismo objeto y lo reescribe.
+    /// Reads "$rFactorShared$" on its own thread and publishes immutable snapshots, so SimHub's UI/data
+    /// threads never touch the mapping. Read-only: it never writes to the mapping.
+    /// Note: while this reader holds the mapping open, Windows keeps it alive even if rFactor exits
+    /// (it reads as zeros). That is why it need not be reopened when rFactor restarts: the rFactor
+    /// plugin reopens the same object and rewrites it.
     /// </summary>
     public sealed class ShmReader : IDisposable
     {
@@ -21,13 +21,15 @@ namespace User.RfSpectator
         readonly ManualResetEvent _stop = new ManualResetEvent(false);
         readonly byte[] _buf = new byte[RfLayout.MinSize];
         readonly Dictionary<string, float[]> _latch = new Dictionary<string, float[]>();
+        // Owned by the reader thread only; PitTracker is not thread-safe.
+        readonly PitTracker _pits = new PitTracker();
 
         Thread _thread;
         MemoryMappedFile _mmf;
         MemoryMappedViewAccessor _acc;
 
-        RfSnapshot _snapshot;            // se accede solo con Volatile
-        long _lastChangeTicks;           // idem (Interlocked)
+        RfSnapshot _snapshot;            // accessed only through Volatile
+        long _lastChangeTicks;           // likewise (Interlocked)
         float _lastEt = float.NaN;
         int _lastSession = int.MinValue;
         int _connected;                  // 0/1
@@ -54,7 +56,7 @@ namespace User.RfSpectator
             get { long t = Interlocked.Read(ref _lastChangeTicks); return t == 0 ? DateTime.MinValue : new DateTime(t, DateTimeKind.Utc); }
         }
 
-        /// <summary>currentET cambio en los ultimos N segundos (distinto de "conectado": el juego en pausa deja ET quieto).</summary>
+        /// <summary>currentET changed within the last N seconds (not the same as "connected": a paused game leaves ET still).</summary>
         public bool DataFresh
         {
             get
@@ -87,6 +89,7 @@ namespace User.RfSpectator
 
         public void Dispose() { Stop(); }
 
+        /// <summary>Poll loop; backs off to 1 s while disconnected or after an error.</summary>
         void Loop()
         {
             while (true)
@@ -96,7 +99,7 @@ namespace User.RfSpectator
                 {
                     if (_acc == null)
                     {
-                        if (!TryOpen()) wait = 1000;      // rFactor puede arrancar despues que SimHub
+                        if (!TryOpen()) wait = 1000;      // rFactor may start after SimHub
                     }
                     else
                     {
@@ -105,7 +108,7 @@ namespace User.RfSpectator
                 }
                 catch (Exception ex)
                 {
-                    // Nunca dejar escapar una excepcion del hilo: tumbaria SimHub.
+                    // Never let an exception escape the thread: it would take SimHub down.
                     Volatile.Write(ref _status, "Error: " + ex.GetType().Name + " - " + ex.Message);
                     Close();
                     Volatile.Write(ref _connected, 0);
@@ -115,6 +118,7 @@ namespace User.RfSpectator
             }
         }
 
+        /// <summary>Opens the mapping read-only; false (with a status message) while rFactor has not created it yet.</summary>
         bool TryOpen()
         {
             try
@@ -141,16 +145,17 @@ namespace User.RfSpectator
             return true;
         }
 
+        /// <summary>One poll: copy the block, retry on a torn read (the writer has no seqlock), publish the first valid parse.</summary>
         void ReadOnce()
         {
             for (int attempt = 0; attempt < 3; attempt++)
             {
                 _acc.ReadArray(0, _buf, 0, _buf.Length);
 
-                // Sesion nueva (ET retrocede o cambia la sesion): se olvidan las brechas congeladas.
+                // New session (ET goes backwards or the session id changes): forget frozen gaps and pit timers.
                 int sess; float et;
                 RfParser.PeekSession(_buf, out sess, out et);
-                if (sess != _lastSession || (!float.IsNaN(_lastEt) && et < _lastEt - 1f)) _latch.Clear();
+                if (sess != _lastSession || (!float.IsNaN(_lastEt) && et < _lastEt - 1f)) { _latch.Clear(); _pits.Reset(); }
 
                 RfSnapshot snap; string err;
                 if (RfParser.TryParse(_buf, _latch, out snap, out err))
@@ -159,6 +164,9 @@ namespace User.RfSpectator
                         Interlocked.Exchange(ref _lastChangeTicks, DateTime.UtcNow.Ticks);
                     _lastEt = snap.ElapsedTime;
                     _lastSession = snap.SessionId;
+                    // Last step before publishing: still single-threaded and the snapshot is not visible yet,
+                    // so filling PitTime here does not break the immutability promise.
+                    _pits.Apply(snap);
                     Volatile.Write(ref _snapshot, snap);
                     Volatile.Write(ref _status, "Conectado");
                     return;
@@ -166,7 +174,7 @@ namespace User.RfSpectator
                 Interlocked.Increment(ref _discarded);
                 Volatile.Write(ref _status, "Lectura descartada: " + err);
             }
-            // Tres intentos invalidos: se conserva el snapshot anterior.
+            // Three invalid attempts: keep the previous snapshot.
         }
 
         void Close()

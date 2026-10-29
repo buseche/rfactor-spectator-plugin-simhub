@@ -40,7 +40,8 @@ Convenciones:
 
 - Las posiciones se numeran con dos digitos: `Pos01`, `Pos02`, ... `Pos40`. `Pos01` es el lider.
 - Por defecto se publican **40 posiciones**. La cantidad se cambia en el archivo de ajustes del
-  plugin (`MaxPositions`, maximo 128) y se aplica al reiniciar SimHub.
+  plugin (`MaxPositions`, maximo 128) y se aplica al reiniciar SimHub. Las filas del carrusel y los
+  colores se editan en la pantalla del plugin y se aplican al instante (secciones 5b y 5c).
 - Si no hay auto en esa posicion, los textos son vacios (`""`), los numericos `0` y los booleanos
   `false`. Una carrera de 5 autos deja de `Pos06` en adelante vacias.
 - Las propiedades `...Text` ya vienen formateadas para mostrar; las numericas sirven para calculos.
@@ -78,6 +79,14 @@ Convenciones:
 | `RfSpectatorPlugin.Session.Track` | String | Nombre de la pista. | **Siempre vacio en espectador**: ese dato solo llega con la telemetria, que rFactor entrega al que conduce. |
 | `RfSpectatorPlugin.Session.TrackTemp` | Double | Temperatura de la pista, en grados Celsius. | Valores plausibles (26,9); sin otra referencia con que compararlos. |
 | `RfSpectatorPlugin.Session.AmbientTemp` | Double | Temperatura ambiente, en grados Celsius. | Idem. |
+| `RfSpectatorPlugin.Session.FastestLap` | Double | Mejor vuelta de la sesion (el minimo de `BestLap` entre todos los autos), en segundos. `0` si nadie tiene vuelta valida. | Rige solo para la sesion en curso: rFactor reinicia `BestLap` por sesion. En empate gana el auto mejor clasificado. |
+| `RfSpectatorPlugin.Session.FastestLapText` | String | Lo anterior como `m:ss.fff`. Vacio si no hay. | |
+| `RfSpectatorPlugin.Session.FastestLapDriver` | String | Piloto que tiene la vuelta rapida. | |
+| `RfSpectatorPlugin.Session.FastestLapSurname` | String | Solo el apellido de ese piloto. | |
+| `RfSpectatorPlugin.Session.FastestLapPlace` | Int32 | Posicion actual en carrera de ese piloto. `0` si no hay. | Cambia si el piloto sube o baja de posicion. |
+| `RfSpectatorPlugin.Session.FastestLapCarNumber` | String | Numero de auto del poseedor (ver `CarNumber`). | Vacio si el nombre del coche no empieza con `#`. |
+| `RfSpectatorPlugin.Session.FastestLapClass` | String | Clase del coche del poseedor. | |
+| `RfSpectatorPlugin.Session.FastestLapColor` | String | Color del poseedor como `#RRGGBB` (ver seccion 5c). Vacio si nadie tiene la vuelta o no hay color configurado. | |
 
 ---
 
@@ -94,6 +103,8 @@ Convenciones:
 | `FirstName` | String | Nombre de pila (todo lo que precede al apellido). | `Jorg` |
 | `Car` | String | Nombre del coche tal como lo da el mod, normalmente con el numero y el apellido. | `#15 Mercedes C180 DTM van Ommen` |
 | `Class` | String | Clase del coche. | `Mercedes C180 DTM` |
+| `CarNumber` | String | Numero de auto sacado de `Car` cuando empieza con `#`; vacio si no. | `15` |
+| `Color` | String | Color configurado como `#RRGGBB` (seccion 5c). Vacio si no hay color para el coche ni su clase. | `#FF8800` |
 | `IsPlayer` | Boolean | `true` si es el auto del jugador local. | En espectador es `false` para todos. |
 
 ### Carrera
@@ -103,10 +114,18 @@ Convenciones:
 | `Laps` | Int32 | Vueltas **completadas**. | `1` |
 | `Sector` | Int32 | Sector en el que va el auto: `1`, `2` o `3`. | `2` |
 | `LapDist` | Double | Distancia recorrida en la vuelta actual, en metros. | `744.16` |
-| `Status` | String | `Corriendo`, `Terminado`, `DNF` o `DQ` (en espanol). | `Corriendo` |
+| `Status` | String | `Corriendo` (0), `Terminado` (1), `DNF` (2) o `DQ` (3), en espanol. Los codigos 2 y 3 vienen del codigo del plugin, sin evidencia en datos reales. | `Corriendo` |
 | `InPits` | Boolean | `true` entre la entrada y la salida de boxes. | `false` |
+| `PitTime` | Double | Segundos transcurridos en boxes desde que el plugin **vio** la entrada; vuelve a `0` al salir. | `12.4` |
+| `PitTimeText` | String | Lo anterior como `m:ss.fff`. Vacio cuando es `0`. | `0:12.400` |
+| `HasFastestLap` | Boolean | `true` si este auto tiene la vuelta rapida de la sesion. Sirve para resaltar la fila. | `false` |
 | `Pitstops` | Int32 | Paradas realizadas. | Sin verificar (siempre `0` en las pruebas). |
 | `Penalties` | Int32 | Penalizaciones pendientes. | Sin verificar (siempre `0`). |
+
+`PitTime` solo cuenta una parada cuando se observa el paso de `InPits` de `false` a `true`: un auto que ya
+esta en boxes la primera vez que se lo ve (garaje al empezar la sesion, o plugin iniciado en plena parada)
+queda en `0` hasta su proxima entrada real. Usa el reloj de la sesion, asi que una pausa no infla el tiempo.
+Se reinicia al cambiar de sesion. **Sin probar dentro de SimHub.**
 
 ### Tiempos (segundos; `0` o texto vacio si no hay dato)
 
@@ -149,32 +168,63 @@ del juego, no a cada frame: no son suaves.
 ## 5b. Carrusel de posiciones (`RfSpectatorPlugin.Carousel*`)
 
 Para dashboards estilo transmision de TV: el bloque principal muestra `Pos01` a `Pos10` y un bloque
-inferior de 10 filas recorre las posiciones 11 en adelante, cambiando de pagina cada 5 segundos.
-El plugin calcula la rotacion; el dashboard solo lee las filas.
+inferior de **N filas configurables** (por defecto **7**, de 1 a 20) recorre las posiciones 11 en adelante,
+cambiando de pagina cada 5 segundos. El plugin calcula la rotacion; el dashboard solo lee las filas.
 
-- Con 10 autos o menos, el carrusel esta vacio (`Carousel.Pages = 0`).
-- Con 11 a 20 autos hay una sola pagina y no rota.
-- Con mas, hay una pagina por cada 10 autos. En la ultima pagina, las filas sobrantes quedan vacias.
+- Las filas se cambian en la pantalla del plugin en SimHub (**Filas visibles del carrusel**). Se guardan
+  al instante y se aplican sin reiniciar SimHub.
+- Se publican siempre las 20 filas `Carousel01` a `Carousel20`; las que superan el valor configurado
+  quedan vacias (texto `""`, numerico `0`, booleano `false`). Dibuja en el dashboard solo las N que uses.
+- Con N = 7 (por defecto): con 10 autos o menos el carrusel esta vacio (`Carousel.Pages = 0`); con 11 a 17
+  autos hay **una sola pagina de hasta 7 filas** y no rota; con 18 a 24 hay 2 paginas, y asi una pagina por
+  cada 7 autos. En la ultima pagina las filas sobrantes quedan vacias.
 - La pagina depende del reloj del ordenador: dos pantallas de SimHub en la misma maquina muestran la misma pagina.
-- Valores por defecto (primera posicion 11, 10 filas, 5 segundos): se cambian en el codigo del plugin
-  (`RfSpectatorPlugin.Carousel.cs`) y se recompila.
+- La primera posicion (11) y los segundos por pagina (5) siguen en el codigo del plugin
+  (`RfSpectatorPlugin.Carousel.cs`): se cambian recompilando.
 
 | Propiedad | Tipo | Descripcion |
 |---|---|---|
 | `Carousel.Pages` | Int32 | Cantidad de paginas. `0` si no hay autos desde la posicion 11. |
 | `Carousel.Page` | Int32 | Pagina actual, desde 1. `0` si no hay carrusel. |
 | `Carousel.FirstPlace` / `Carousel.LastPlace` | Int32 | Primera y ultima posicion que muestra la pagina actual. |
-| `Carousel.RangeText` | String | Rango de la pagina actual, por ejemplo `11-20`. Util para un titulo. |
-| `CarouselNN.Place` | Int32 | **Posicion real** del auto que muestra la fila `NN` (de `01` a `10`) en este momento. `0` si la fila esta vacia. |
+| `Carousel.RangeText` | String | Rango de la pagina actual, por ejemplo `11-17`. Util para un titulo. |
+| `CarouselNN.Place` | Int32 | **Posicion real** del auto que muestra la fila `NN` (de `01` a `20`) en este momento. `0` si la fila esta vacia. |
 | `CarouselNN.Driver`, `Surname`, `FirstName`, `Car`, `Class` | String | Igual que en `PosNN`. |
+| `CarouselNN.Color` | String | Igual que en `PosNN` (`#RRGGBB` o vacio). |
 | `CarouselNN.Laps`, `Sector` | Int32 | Igual que en `PosNN`. |
 | `CarouselNN.BestLap`, `LastLap`, `GapLeader`, `GapAhead` | Double | Igual que en `PosNN`. |
 | `CarouselNN.BestLapText`, `LastLapText`, `GapLeaderText`, `GapAheadText`, `Status` | String | Igual que en `PosNN`. |
 | `CarouselNN.InPits`, `IsPlayer` | Boolean | Igual que en `PosNN`. |
+| `CarouselNN.PitTime` | Double | Igual que en `PosNN`. |
+| `CarouselNN.PitTimeText` | String | Igual que en `PosNN`. |
+| `CarouselNN.HasFastestLap` | Boolean | Igual que en `PosNN`. |
 
-Las filas del carrusel no incluyen `CurS1`, `CurS2`, `Pitstops`, `Penalties`, `LapsBehindLeader`,
-`SpeedKmh`, `LapDist`, `PosX` ni `PosZ`. Estado: la logica de rotacion esta probada con pruebas de
-unidad; **sin probar dentro de SimHub**.
+Las filas del carrusel no incluyen `CarNumber`, `CurS1`, `CurS2`, `Pitstops`, `Penalties`, `LapsBehindLeader`,
+`SpeedKmh`, `LapDist`, `PosX` ni `PosZ`. Estado: la logica de rotacion y del limite de filas esta probada con
+pruebas de unidad; **sin probar dentro de SimHub**.
+
+---
+
+## 5c. Colores por clase y por auto
+
+Pensado para tintar filas o marcas del dashboard segun la clase (GT3, LMP...) o un coche concreto.
+
+- **Donde se editan:** pantalla del plugin RfSpectator en SimHub, secciones **Colores por clase** y
+  **Colores por auto**. Cada lista tiene un cuadro con los nombres presentes en pista (para elegir sin
+  escribir), un campo `#RRGGBB` con vista previa del color y botones para agregar, actualizar y quitar.
+- **Cuando se aplican:** al instante, sin reiniciar SimHub. Se guardan al editar (clave `GeneralSettings`).
+- **Formato:** solo `#RRGGBB` (6 digitos). Se guarda en mayusculas. Un valor invalido se ignora.
+- **Coincidencia:** por nombre exacto sin distinguir mayusculas. Colores por clase contra `Class`; colores
+  por auto contra `Car` (el nombre completo del coche, p. ej. `#15 Mercedes C180 DTM van Ommen`).
+- **Precedencia:** el color por auto gana al color por clase. Sin coincidencia: texto vacio `""`.
+
+| Propiedad | Tipo | Descripcion |
+|---|---|---|
+| `PosNN.Color` | String | Color resuelto del auto en esa posicion. |
+| `CarouselNN.Color` | String | Color resuelto del auto de esa fila del carrusel. |
+| `Session.FastestLapColor` | String | Color resuelto del poseedor de la vuelta rapida. |
+
+Estado: la resolucion esta probada con pruebas de unidad; la pantalla y su guardado **sin probar dentro de SimHub**.
 
 ---
 
@@ -251,6 +301,8 @@ referencia; **Sin probar** = nunca vimos un valor distinto de cero.
 | `SpeedKmh`, `PosX`, `PosZ` | Verificado (valores coherentes) |
 | `IsPlayer` | Verificado (siempre `false` en espectador) |
 | `Pitstops`, `Penalties`, `LapsBehindLeader` | **Sin probar** |
+| `PitTime*`, `HasFastestLap`, `Session.FastestLap*` | Verificado solo con pruebas de unidad; sin probar en SimHub |
+| `*.Color`, filas configurables del carrusel, pantalla de ajustes | Pruebas de unidad de la logica; sin probar en SimHub |
 
 ---
 
@@ -268,4 +320,4 @@ referencia; **Sin probar** = nunca vimos un valor distinto de cero.
 - **Las propiedades estandar de SimHub** (`DataCorePlugin.GameData.*`) siguen sin rellenarse en
   espectador; este plugin no las modifica.
 - **Licencias:** el plugin lee la memoria compartida y no incluye codigo de `rFactorSharedMemoryMap`
-  (licencia GPL-2.0 en su repositorio original). Licencia de este plugin: pendiente de definir.
+  (licencia GPL-2.0 en su repositorio original). Licencia de este plugin: GNU GPL v3 (ver `LICENSE`).

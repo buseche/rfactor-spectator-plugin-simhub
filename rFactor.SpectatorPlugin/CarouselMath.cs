@@ -3,13 +3,20 @@ using System;
 namespace User.RfSpectator
 {
     /// <summary>
-    /// Logica del carrusel de posiciones (sin dependencias de SimHub, para poder probarla).
-    /// El bloque principal muestra las posiciones 1..(start-1); el carrusel recorre start..numVehicles
-    /// en paginas de "rows" filas, cambiando de pagina cada "secondsPerPage" segundos.
+    /// Position-carousel logic, kept free of SimHub dependencies so it can be unit tested.
+    /// The main block shows places 1..(start-1); the carousel walks start..numVehicles
+    /// in pages of "rows" rows, switching page every "secondsPerPage" seconds.
     /// </summary>
     internal static class CarouselMath
     {
-        /// <summary>Cantidad de paginas. 0 si no hay autos en el rango del carrusel.</summary>
+        /// <summary>Bounds a user-configured row count to 1..max so a bad setting can never break paging or registration.</summary>
+        public static int ClampRows(int rows, int max)
+        {
+            if (rows < 1) return 1;
+            return rows > max ? max : rows;
+        }
+
+        /// <summary>Number of pages; 0 when no car falls in the carousel range.</summary>
         public static int Pages(int numVehicles, int start, int rows)
         {
             if (rows < 1) return 0;
@@ -18,7 +25,7 @@ namespace User.RfSpectator
             return (count + rows - 1) / rows;
         }
 
-        /// <summary>Pagina actual (base 0) a partir de un reloj en segundos. Con una sola pagina no rota.</summary>
+        /// <summary>Current page (0-based) from a clock in seconds. A single page never rotates. Driven by the wall clock so every dashboard stays in sync.</summary>
         public static int Page(int pages, double nowSeconds, double secondsPerPage)
         {
             if (pages <= 1 || secondsPerPage <= 0) return 0;
@@ -26,7 +33,7 @@ namespace User.RfSpectator
             return (int)(((tick % pages) + pages) % pages);
         }
 
-        /// <summary>Posicion real que va en la fila "rowIndex" (base 1) de la pagina; 0 si la fila queda vacia.</summary>
+        /// <summary>Real place shown in row "rowIndex" (1-based) of the page; 0 when the row is empty.</summary>
         public static int PlaceAt(int numVehicles, int start, int rows, int page, int rowIndex)
         {
             if (rowIndex < 1 || rowIndex > rows || page < 0) return 0;

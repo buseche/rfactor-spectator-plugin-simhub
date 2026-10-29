@@ -5,7 +5,7 @@ using System.Text;
 
 namespace User.RfSpectator
 {
-    /// <summary>Un auto ya decodificado. Inmutable en la practica: solo lo crea el parser.</summary>
+    /// <summary>One decoded car. Effectively immutable once published: only the parser (and PitTracker, before publishing) writes it.</summary>
     public sealed class RfVehicle
     {
         public string Driver = "";
@@ -13,17 +13,18 @@ namespace User.RfSpectator
         public string Class = "";
         public int Place;
         public int Laps;
-        public int Sector;               // 1, 2 o 3
-        public int FinishStatus;         // 0 corriendo, 1 termino, 2 DNF, 3 DQ
+        public int Sector;               // 1, 2 or 3
+        public int FinishStatus;         // 0 running, 1 finished, 2 DNF, 3 DQ
         public float LapDist;
-        public float BestLap = -1;       // <= 0 = sin dato
+        public float BestLap = -1;       // <= 0 = no data
         public float LastLap = -1;
         public float CurS1 = -1;
-        public float CurS2 = -1;         // sector 2 aislado (acumulado - S1)
-        public float GapLeader;          // segundos
-        public float GapAhead;           // segundos
+        public float CurS2 = -1;         // sector 2 alone (the raw field is cumulative S1+S2)
+        public float GapLeader;          // seconds
+        public float GapAhead;           // seconds
         public int LapsBehindLeader;
         public bool InPits;
+        public float PitTime;            // seconds since the observed pit entry; 0 when not in the pits (set by PitTracker)
         public bool IsPlayer;
         public int Pitstops;
         public int Penalties;
@@ -31,15 +32,16 @@ namespace User.RfSpectator
         public float PosX;
         public float PosZ;
 
+        /// <summary>Stable per-session identity; the shared memory exposes no car id, so driver+car is the best key.</summary>
         public string Key { get { return Driver + "|" + Car; } }
     }
 
-    /// <summary>Foto completa de una lectura valida. Una vez publicada no se modifica.</summary>
+    /// <summary>Complete picture of one valid read. Once published it is never modified, so UI-thread delegates can read it lock-free.</summary>
     public sealed class RfSnapshot
     {
         public int SessionId;
         public float ElapsedTime;
-        public float EndTime = float.NaN;    // NaN = sin limite de tiempo
+        public float EndTime = float.NaN;    // NaN = no time limit
         public int MaxLaps;
         public int Phase;
         public int Yellow;
@@ -49,20 +51,26 @@ namespace User.RfSpectator
         public float TrackTemp = float.NaN;
         public float AmbientTemp = float.NaN;
         public int NumVehicles;
-        public RfVehicle[] ByPlace = new RfVehicle[0];   // indice 0 = P1
+        public RfVehicle[] ByPlace = new RfVehicle[0];   // index 0 = P1
         public DateTime ReadAtUtc;
+        public int FastestLapPlace;      // place of the session's best lap holder; 0 = none
 
         public RfVehicle AtPlace(int place)
         {
             return (place >= 1 && place <= ByPlace.Length) ? ByPlace[place - 1] : null;
         }
+
+        /// <summary>Car holding the session's fastest lap, or null when nobody has a valid lap yet.</summary>
+        public RfVehicle FastestLapCar { get { return AtPlace(FastestLapPlace); } }
     }
 
+    /// <summary>Decodes the raw shared-memory byte block into an RfSnapshot, defensively.</summary>
     internal static class RfParser
     {
+        // Names in the shared memory are Windows-1252, not UTF-8.
         static readonly Encoding Cp1252 = Encoding.GetEncoding(1252);
 
-        /// <summary>Lectura barata de sesion y tiempo para detectar sesion nueva antes del parseo completo.</summary>
+        /// <summary>Cheap read of session id and time, so a new session can be detected (and state reset) before the full parse.</summary>
         public static void PeekSession(byte[] b, out int session, out float et)
         {
             session = BitConverter.ToInt32(b, RfLayout.OffSession);
@@ -70,28 +78,28 @@ namespace User.RfSpectator
         }
 
         /// <summary>
-        /// Valida y convierte el bloque. Devuelve false (con el motivo) si no tiene sentido:
-        /// el escritor no tiene seqlock, asi que esta validacion es la unica defensa.
-        /// latch: brechas congeladas de autos que ya terminaron (clave piloto|coche).
+        /// Validates and converts the block. Returns false (with the reason) if it makes no sense:
+        /// the writer has no seqlock, so torn reads are possible and this validation is the only defence.
+        /// latch: frozen gaps of cars that already finished (key driver|car).
         /// </summary>
         public static bool TryParse(byte[] b, Dictionary<string, float[]> latch, out RfSnapshot snap, out string error)
         {
             snap = null; error = null;
-            if (b == null || b.Length < RfLayout.MinSize) { error = "bloque demasiado corto"; return false; }
+            if (b == null || b.Length < RfLayout.MinSize) { error = "block too short"; return false; }
 
             int n = BitConverter.ToInt32(b, RfLayout.OffNumVehicles);
-            if (n < 0 || n > RfLayout.MaxVehicles) { error = "numVehicles fuera de rango: " + n; return false; }
+            if (n < 0 || n > RfLayout.MaxVehicles) { error = "numVehicles out of range: " + n; return false; }
 
             float et = BitConverter.ToSingle(b, RfLayout.OffCurrentET);
-            if (!IsFinite(et) || et < 0) { error = "currentET invalido"; return false; }
+            if (!IsFinite(et) || et < 0) { error = "invalid currentET"; return false; }
 
             var s = new RfSnapshot();
             s.SessionId = BitConverter.ToInt32(b, RfLayout.OffSession);
             s.ElapsedTime = et;
             float endEt = BitConverter.ToSingle(b, RfLayout.OffEndET);
-            s.EndTime = (IsFinite(endEt) && endEt > 0 && endEt < 1e9f) ? endEt : float.NaN;  // centinela -> NaN
+            s.EndTime = (IsFinite(endEt) && endEt > 0 && endEt < 1e9f) ? endEt : float.NaN;  // sentinel -> NaN
             int maxLaps = BitConverter.ToInt32(b, RfLayout.OffMaxLaps);
-            s.MaxLaps = (maxLaps > 0 && maxLaps < 10000) ? maxLaps : 0;                       // D: sin confirmar
+            s.MaxLaps = (maxLaps > 0 && maxLaps < 10000) ? maxLaps : 0;                       // D: unconfirmed
             s.Phase = b[RfLayout.OffGamePhase];
             s.Yellow = (sbyte)b[RfLayout.OffYellow];
             s.InRealtime = b[RfLayout.OffInRealtime] != 0;
@@ -107,8 +115,8 @@ namespace User.RfSpectator
             {
                 int o = RfLayout.VehicleBase + i * RfLayout.VehicleStride;
                 int place = b[o + RfLayout.VPlace];
-                if (place < 1 || place > n) { error = "place fuera de rango: " + place; return false; }
-                if (byPlace[place - 1] != null) { error = "place repetido: " + place; return false; }
+                if (place < 1 || place > n) { error = "place out of range: " + place; return false; }
+                if (byPlace[place - 1] != null) { error = "duplicate place: " + place; return false; }
 
                 var v = new RfVehicle();
                 v.Place = place;
@@ -135,21 +143,21 @@ namespace User.RfSpectator
                     !Read(b, o + RfLayout.VSpeed, out spd) ||
                     !Read(b, o + RfLayout.VPosX, out px) ||
                     !Read(b, o + RfLayout.VPosZ, out pz))
-                { error = "float no finito en el auto " + i; return false; }
+                { error = "non-finite float in car " + i; return false; }
 
                 v.LapDist = lapDist;
                 v.BestLap = best > 0 ? best : -1;
                 v.LastLap = last > 0 ? last : -1;
                 v.CurS1 = c1 > 0 ? c1 : -1;
-                v.CurS2 = (c1 > 0 && c2c > c1) ? c2c - c1 : -1;   // el campo es acumulado S1+S2
+                v.CurS2 = (c1 > 0 && c2c > c1) ? c2c - c1 : -1;   // the field is cumulative S1+S2
                 v.GapLeader = gl;
                 v.GapAhead = ga;
                 v.SpeedKmh = spd * 3.6f;
                 v.PosX = px;
                 v.PosZ = pz;
 
-                // Tras la meta lapDist y las brechas pasan a negativo: se congela la brecha del primer
-                // snapshot con finishStatus != 0 (recortada a >= 0).
+                // After the flag lapDist and the gaps turn negative: freeze the gap of the first
+                // snapshot with finishStatus != 0 (clamped to >= 0).
                 if (v.FinishStatus != 0 && latch != null)
                 {
                     float[] frozen;
@@ -164,10 +172,30 @@ namespace User.RfSpectator
                 byPlace[place - 1] = v;
             }
             s.ByPlace = byPlace;
+            s.FastestLapPlace = FindFastestPlace(byPlace);
             snap = s;
             return true;
         }
 
+        /// <summary>
+        /// Place (1-based) of the car holding the best lap, 0 if nobody has one. Ties go to the better-placed
+        /// car. rFactor resets BestLap per session, so this is per-session without extra bookkeeping.
+        /// </summary>
+        public static int FindFastestPlace(RfVehicle[] byPlace)
+        {
+            int bestPlace = 0;
+            float best = float.MaxValue;
+            if (byPlace == null) return 0;
+            for (int i = 0; i < byPlace.Length; i++)
+            {
+                var v = byPlace[i];
+                if (v == null || !(v.BestLap > 0)) continue;
+                if (v.BestLap < best) { best = v.BestLap; bestPlace = v.Place; }
+            }
+            return bestPlace;
+        }
+
+        /// <summary>Reads a float and reports whether it is finite (NaN/Inf mean a torn or garbage read).</summary>
         static bool Read(byte[] b, int off, out float value)
         {
             value = BitConverter.ToSingle(b, off);
@@ -175,11 +203,13 @@ namespace User.RfSpectator
         }
 
         static bool IsFinite(float f) { return !float.IsNaN(f) && !float.IsInfinity(f); }
+        /// <summary>Maps implausible temperatures (uninitialised memory) to NaN.</summary>
         static float Sane(float f) { return (IsFinite(f) && f > -100f && f < 200f) ? f : float.NaN; }
 
-        // 0 = sector 3, 1 = sector 1, 2 = sector 2
+        // raw 0 = sector 3, 1 = sector 1, 2 = sector 2 (the game numbers them from the previous line crossing)
         static int SectorToHuman(int raw) { return raw == 0 ? 3 : (raw == 1 || raw == 2 ? raw : 0); }
 
+        /// <summary>Reads a NUL-terminated cp1252 string and flattens control characters, which would break dashboards.</summary>
         public static string ReadString(byte[] b, int off, int len)
         {
             int end = 0;
@@ -190,11 +220,12 @@ namespace User.RfSpectator
         }
     }
 
+    /// <summary>Text formatting for dashboards. The returned strings are user-visible and intentionally Spanish.</summary>
     internal static class RfFormat
     {
         static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
-        /// <summary>mm:ss.fff, o texto vacio si no hay dato.</summary>
+        /// <summary>mm:ss.fff, or empty text when there is no data.</summary>
         public static string LapTime(float t)
         {
             if (!(t > 0)) return "";
@@ -203,6 +234,7 @@ namespace User.RfSpectator
             return m.ToString(Inv) + ":" + s.ToString("00.000", Inv);
         }
 
+        /// <summary>Gap text: blank for the leader, "+nL" when lapped, otherwise "+s.fff".</summary>
         public static string Gap(RfVehicle v, float seconds)
         {
             if (v.Place <= 1) return "";
