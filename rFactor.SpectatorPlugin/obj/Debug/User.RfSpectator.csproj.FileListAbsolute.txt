@@ -18,14 +18,9 @@ C:\Users\ayrto\OneDrive\Desktop\simhub-plugin-rfactor-spectator\simhub-plugin\rF
 C:\Users\ayrto\OneDrive\Desktop\simhub-plugin-rfactor-spectator\simhub-plugin\rFactor.SpectatorPlugin\obj\Debug\User.RfSpectator.dll
 C:\Users\ayrto\OneDrive\Desktop\simhub-plugin-rfactor-spectator\simhub-plugin\rFactor.SpectatorPlugin\obj\Debug\User.RfSpectator.pdb
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\User.RfSpectator.csproj.AssemblyReference.cache
-C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\User.RfSpectator.Properties.Resources.resources
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\User.RfSpectator.csproj.GenerateResource.cache
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\User.RfSpectator.csproj.CoreCompileInputs.cache
-C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\User.RfSpectator.dll
-C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\User.RfSpectator.pdb
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\Languages\User.PluginSdkDemo.resx
-C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\User.RfSpectator.dll
-C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\User.RfSpectator.pdb
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\AvalonDock.dll
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\AvalonDock.Themes.VS2013.dll
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\GongSolutions.WPF.DragDrop.dll
@@ -36,3 +31,8 @@ C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.Spec
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\WoteverCommon.dll
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\WoteverLocalization.dll
 C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\User.RfS.EC78F3E5.Up2Date
+C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\BU.RfSpectator.Properties.Resources.resources
+C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\BU.RfSpectator.dll
+C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\bin\Debug\BU.RfSpectator.pdb
+C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\BU.RfSpectator.dll
+C:\Users\ayrto\source\repos\buseche\rfactor-spectator-plugin-simhub\rFactor.SpectatorPlugin\obj\Debug\BU.RfSpectator.pdb

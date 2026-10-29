@@ -1,0 +1,122 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|c:\\users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rfactor.spectatorplugin\\rfspectatorplugin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|solutionrelative:rfspectatorplugin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|c:\\users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rfactor.spectatorplugin\\rflayout.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|solutionrelative:rflayout.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|c:\\users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rfactor.spectatorplugin\\pittracker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|solutionrelative:pittracker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|c:\\users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rfactor.spectatorplugin\\nameparts.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|solutionrelative:nameparts.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|c:\\users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rfactor.spectatorplugin\\colorresolver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|solutionrelative:colorresolver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|c:\\users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rfactor.spectatorplugin\\carouselmath.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|solutionrelative:carouselmath.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "RfSpectatorPlugin.cs",
+              "DocumentMoniker": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\RfSpectatorPlugin.cs",
+              "RelativeDocumentMoniker": "RfSpectatorPlugin.cs",
+              "ToolTip": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\RfSpectatorPlugin.cs",
+              "RelativeToolTip": "RfSpectatorPlugin.cs",
+              "ViewState": "AgIAAEEAAAAAAAAAAAAuwBoAAAA8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-29T02:21:10.332Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "RfLayout.cs",
+              "DocumentMoniker": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\RfLayout.cs",
+              "RelativeDocumentMoniker": "RfLayout.cs",
+              "ToolTip": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\RfLayout.cs",
+              "RelativeToolTip": "RfLayout.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-29T02:21:01.652Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "PitTracker.cs",
+              "DocumentMoniker": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\PitTracker.cs",
+              "RelativeDocumentMoniker": "PitTracker.cs",
+              "ToolTip": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\PitTracker.cs",
+              "RelativeToolTip": "PitTracker.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-29T02:20:59.174Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "NameParts.cs",
+              "DocumentMoniker": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\NameParts.cs",
+              "RelativeDocumentMoniker": "NameParts.cs",
+              "ToolTip": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\NameParts.cs",
+              "RelativeToolTip": "NameParts.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-29T02:20:55.871Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ColorResolver.cs",
+              "DocumentMoniker": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\ColorResolver.cs",
+              "RelativeDocumentMoniker": "ColorResolver.cs",
+              "ToolTip": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\ColorResolver.cs",
+              "RelativeToolTip": "ColorResolver.cs",
+              "ViewState": "AgIAABYAAAAAAAAAAAAgwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-29T02:20:52.948Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "CarouselMath.cs",
+              "DocumentMoniker": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\CarouselMath.cs",
+              "RelativeDocumentMoniker": "CarouselMath.cs",
+              "ToolTip": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\CarouselMath.cs",
+              "RelativeToolTip": "CarouselMath.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-29T02:20:47.988Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

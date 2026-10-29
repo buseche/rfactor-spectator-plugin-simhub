@@ -24,7 +24,7 @@ namespace User.RfSpectator
         public RfSpectatorSettings Settings;
         public PluginManager PluginManager { get; set; }
 
-        public ImageSource PictureIcon => this.ToIcon(Properties.Resources.sdkmenuicon);
+        public ImageSource PictureIcon => this.ToIcon(null);
         public string LeftMenuTitle { get { return "RfSpectator"; } }
 
         ShmReader _reader;

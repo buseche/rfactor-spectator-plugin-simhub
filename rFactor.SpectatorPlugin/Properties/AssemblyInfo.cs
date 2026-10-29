@@ -19,5 +19,5 @@ using System.Runtime.InteropServices;
 [assembly: Guid("833040c9-fe5e-4ccf-b21d-71979e049b6b")]
 
 // Version is major.minor.build.revision; build and revision may be defaulted with '*' (e.g. "1.0.*").
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]

@@ -1,0 +1,38 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{00000000-0000-0000-0000-000000000000}|\u003CSolution\u003E|User.RfSpectator||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{833040C9-FE5E-4CCF-B21D-71979E049B6B}|User.RfSpectator.csproj|c:\\users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rfactor.spectatorplugin\\||{B270807C-D8C6-49EB-8EBE-8E8D566637A1}|5e9a8ac2-4f34-4521-858f-4c248ba31532"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "User.RfSpectator",
+              "DocumentMoniker": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\User.RfSpectator.csproj",
+              "RelativeDocumentMoniker": "User.RfSpectator.csproj",
+              "ToolTip": "C:\\Users\\ayrto\\source\\repos\\buseche\\rfactor-spectator-plugin-simhub\\rFactor.SpectatorPlugin\\User.RfSpectator.csproj",
+              "RelativeToolTip": "User.RfSpectator.csproj",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-10-29T02:37:44.543Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
